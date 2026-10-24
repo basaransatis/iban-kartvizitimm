@@ -7,35 +7,48 @@
 <title>IBAN Kartviziti</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;padding:20px;background:#0b1220;color:white;
-font-family:Arial,sans-serif;min-height:100vh}
+body{
+  margin:0;padding:20px;background:#0b1220;color:white;
+  font-family:Arial,sans-serif;min-height:100vh
+}
 main{max-width:440px;margin:20px auto}
-.card{background:#142033;border:1px solid #304057;
-border-radius:20px;padding:24px;margin-bottom:18px}
+.card{
+  background:#142033;border:1px solid #304057;
+  border-radius:20px;padding:24px;margin-bottom:18px
+}
 h2{margin-top:0}
-label{display:block;color:#b8c6d9;font-size:13px;margin:15px 0 7px}
-input{width:100%;padding:13px;border-radius:9px;
-border:1px solid #46566d;background:#0b1220;color:white;font-size:15px}
-button{width:100%;padding:14px;border:0;border-radius:10px;
-background:#159765;color:white;font-weight:bold;font-size:15px;
-margin-top:15px}
+label{
+  display:block;color:#b8c6d9;font-size:13px;
+  margin:15px 0 7px
+}
+input{
+  width:100%;padding:13px;border-radius:9px;
+  border:1px solid #46566d;background:#0b1220;
+  color:white;font-size:15px
+}
+button{
+  width:100%;padding:14px;border:0;border-radius:10px;
+  background:#159765;color:white;font-weight:bold;
+  font-size:15px;margin-top:12px
+}
+.secondary{background:#30445f}
 .muted{color:#aab9cc;font-size:13px}
 .value{overflow-wrap:anywhere;margin-top:7px;font-size:17px}
 .iban{padding:13px;background:#202e43;border-radius:9px}
-#status{overflow-wrap:anywhere;font-size:13px;color:#8ee5b9}
+.status{font-size:13px;color:#8ee5b9;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
 <main>
 
-<section class="card">
+<section class="card" id="generator">
 <h2>🔗 IBAN Bağlantısı Oluştur</h2>
-<p class="muted">İşletme bilgilerini gir, müşterine özel bağlantını hazırla.</p>
+<p class="muted">İşletme bilgilerini gir ve bağlantını hazırla.</p>
 
 <label>İşletme adı</label>
 <input id="business" placeholder="Güzel Kuyumculuk">
 
-<label>Hesap sahibi</label>
+<label>Hesap sahibi adı soyadı</label>
 <input id="owner" placeholder="Ahmet Şan">
 
 <label>Banka adı</label>
@@ -45,84 +58,126 @@ margin-top:15px}
 <input id="iban" placeholder="TR ile başlayan IBAN">
 
 <button onclick="createLink()">Bağlantıyı oluştur</button>
+
 <div id="result" hidden>
 <label>Hazır bağlantın</label>
 <input id="link" readonly>
-<button onclick="copyLink()">Bağlantıyı kopyala</button>
-<button onclick="openLink()">Sayfayı test et</button>
+<button onclick="copyText('link','status')">Bağlantıyı kopyala</button>
+<button class="secondary" onclick="openLink()">Sayfayı test et</button>
 </div>
-<p id="status" aria-live="polite"></p>
+<p id="status" class="status" aria-live="polite"></p>
 </section>
 
-<section class="card">
-<h2>💳 IBAN Kartviziti</h2>
-<p class="muted">Ödeme bilgileri</p>
-<label>İŞLETME / HESAP SAHİBİ</label>
-<div class="value" id="showOwner">İşletme adı</div>
+<section class="card" id="payment" hidden>
+<h2>💳 Ödeme Bilgileri</h2>
+<p class="muted">Bilgileri ayrı ayrı kopyalayabilirsin.</p>
+
+<label>İŞLETME</label>
+<div class="value" id="showBusiness"></div>
+
+<label>HESAP SAHİBİ</label>
+<div class="value" id="showOwner"></div>
+<button onclick="copyValue('showOwner','ownerStatus')">
+Ad Soyad Kopyala
+</button>
+
 <label>BANKA</label>
-<div class="value" id="showBank">Banka adı</div>
+<div class="value" id="showBank"></div>
+<button class="secondary" onclick="copyValue('showBank','bankStatus')">
+Banka Adını Kopyala
+</button>
+
 <label>IBAN</label>
-<div class="value iban" id="showIban">IBAN bilgisi</div>
-<button onclick="copyInfo()">📋 Tüm Bilgileri Kopyala</button>
-<p id="copyStatus" class="muted" aria-live="polite"></p>
+<div class="value iban" id="showIban"></div>
+<button onclick="copyValue('showIban','ibanStatus')">
+IBAN'ı Kopyala
+</button>
+
+<p id="ownerStatus" class="status" aria-live="polite"></p>
+<p id="bankStatus" class="status" aria-live="polite"></p>
+<p id="ibanStatus" class="status" aria-live="polite"></p>
 </section>
 
 </main>
+
 <script>
 const p = new URLSearchParams(location.search);
-const business = p.get("isletme") || p.get("ad") || "";
-const owner = p.get("sahip") || "";
+const business = p.get("isletme") || "";
+const owner = p.get("sahip") || p.get("ad") || "";
 const bank = p.get("banka") || "";
-const iban = p.get("iban") || "";
+const iban = (p.get("iban") || "").replace(/\s/g,"");
 
 if (business || owner || bank || iban) {
- document.getElementById("showOwner").textContent =
- [business,owner].filter(Boolean).join(" — ") || "Belirtilmedi";
- document.getElementById("showBank").textContent = bank || "Belirtilmedi";
- document.getElementById("showIban").textContent = iban || "Belirtilmedi";
- document.querySelectorAll("main > .card")[0].hidden = true;
+  document.getElementById("generator").hidden = true;
+  document.getElementById("payment").hidden = false;
+  document.getElementById("showBusiness").textContent = business || "—";
+  document.getElementById("showOwner").textContent = owner || "—";
+  document.getElementById("showBank").textContent = bank || "—";
+  document.getElementById("showIban").textContent = iban || "—";
 }
 
 function createLink(){
- const b = document.getElementById("business").value.trim();
- const o = document.getElementById("owner").value.trim();
- const k = document.getElementById("bank").value.trim();
- const i = document.getElementById("iban").value.trim().replace(/\s/g,"");
- if(!b || !o || !k || !i){
-  document.getElementById("status").textContent = "Lütfen tüm alanları doldur.";
-  return;
- }
- const params = new URLSearchParams({isletme:b,sahip:o,banka:k,iban:i});
- document.getElementById("link").value =
- location.origin + location.pathname + "?" + params.toString();
- document.getElementById("result").hidden = false;
- document.getElementById("status").textContent = "Bağlantı hazır!";
+  const b = document.getElementById("business").value.trim();
+  const o = document.getElementById("owner").value.trim();
+  const k = document.getElementById("bank").value.trim();
+  const i = document.getElementById("iban").value.trim().replace(/\s/g,"");
+  const status = document.getElementById("status");
+
+  if(!b || !o || !k || !i){
+    status.textContent = "Lütfen bütün alanları doldur.";
+    return;
+  }
+
+  const params = new URLSearchParams({
+    isletme:b, sahip:o, banka:k, iban:i
+  });
+
+  document.getElementById("link").value =
+    location.origin + location.pathname + "?" + params.toString();
+
+  document.getElementById("result").hidden = false;
+  status.textContent = "Bağlantı hazır!";
 }
-async function copyLink(){
- const input=document.getElementById("link");
- try{
-  await navigator.clipboard.writeText(input.value);
-  document.getElementById("status").textContent="Bağlantı kopyalandı!";
- }catch(e){
-  input.select();
-  document.execCommand("copy");
-  document.getElementById("status").textContent="Bağlantıyı kopyalamayı denedik; kopyalandığını kontrol et.";
- }
+
+async function copyText(inputId,statusId){
+  const value = document.getElementById(inputId).value;
+  await copyString(value,statusId);
 }
-function openLink(){location.href=document.getElementById("link").value}
-async function copyInfo(){
- const text="İşletme: "+(document.getElementById("showOwner").textContent)+
- "\nBanka: "+document.getElementById("showBank").textContent+
- "\nIBAN: "+document.getElementById("showIban").textContent;
- try{
-  await navigator.clipboard.writeText(text);
-  document.getElementById("copyStatus").textContent="Bilgiler kopyalandı!";
- }catch(e){
-  const t=document.createElement("textarea");t.value=text;
-  document.body.appendChild(t);t.select();
-  document.execCommand("copy");t.remove();
-  document.getElementById("copyStatus").textContent="Kopyalama denendi; sonucu kontrol et.";
- }
+
+async function copyValue(valueId,statusId){
+  const value = document.getElementById(valueId).textContent.trim();
+  if(!value || value === "—"){
+    document.getElementById(statusId).textContent = "Bu bilgi girilmemiş.";
+    return;
+  }
+  await copyString(value,statusId);
+}
+
+async function copyString(value,statusId){
+  const status = document.getElementById(statusId);
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(value);
+    } else {
+      throw new Error("clipboard unavailable");
+    }
+    status.textContent = "Kopyalandı!";
+  }catch(e){
+    const t = document.createElement("textarea");
+    t.value = value;
+    t.style.position = "fixed";
+    t.style.opacity = "0";
+    document.body.appendChild(t);
+    t.select();
+    const ok = document.execCommand("copy");
+    t.remove();
+    status.textContent = ok ? "Kopyalandı!" :
+      "Kopyalanamadı; bilgiyi seçip kopyalayabilirsin.";
+  }
+}
+
+function openLink(){
+  location.href = document.getElementById("link").value;
 }
 </script>
 </body>
