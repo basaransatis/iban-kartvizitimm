@@ -7,74 +7,122 @@
 <title>IBAN Kartviziti</title>
 <style>
 *{box-sizing:border-box}
-body{
-  margin:0;padding:24px;min-height:100vh;
-  display:grid;place-items:center;
-  background:#0b1220;color:#fff;
-  font-family:Arial,sans-serif
-}
-.card{
-  width:100%;max-width:400px;padding:26px;
-  background:#142033;border-radius:22px;
-  border:1px solid #304057
-}
-.label{color:#aab9cc;font-size:12px;
-  margin-top:24px;letter-spacing:1px}
-.value{font-size:17px;margin-top:8px;
-  overflow-wrap:anywhere}
-.iban{padding:15px;background:#202e43;
-  border-radius:10px;font-weight:bold}
-button{width:100%;padding:16px;margin-top:22px;
-  background:#159765;color:white;border:0;
-  border-radius:12px;font-size:16px;
-  font-weight:bold}
-#status{text-align:center;color:#8ee5b9}
+body{margin:0;padding:20px;background:#0b1220;color:white;
+font-family:Arial,sans-serif;min-height:100vh}
+main{max-width:440px;margin:20px auto}
+.card{background:#142033;border:1px solid #304057;
+border-radius:20px;padding:24px;margin-bottom:18px}
+h2{margin-top:0}
+label{display:block;color:#b8c6d9;font-size:13px;margin:15px 0 7px}
+input{width:100%;padding:13px;border-radius:9px;
+border:1px solid #46566d;background:#0b1220;color:white;font-size:15px}
+button{width:100%;padding:14px;border:0;border-radius:10px;
+background:#159765;color:white;font-weight:bold;font-size:15px;
+margin-top:15px}
+.muted{color:#aab9cc;font-size:13px}
+.value{overflow-wrap:anywhere;margin-top:7px;font-size:17px}
+.iban{padding:13px;background:#202e43;border-radius:9px}
+#status{overflow-wrap:anywhere;font-size:13px;color:#8ee5b9}
 </style>
 </head>
 <body>
-<main class="card">
-  <h2>💳 IBAN Kartviziti</h2>
-  <p style="color:#aab9cc">Ödeme bilgileri</p>
+<main>
 
-  <div class="label">İŞLETME / HESAP SAHİBİ</div>
-  <div class="value" id="owner">İşletme adı</div>
+<section class="card">
+<h2>🔗 IBAN Bağlantısı Oluştur</h2>
+<p class="muted">İşletme bilgilerini gir, müşterine özel bağlantını hazırla.</p>
 
-  <div class="label">BANKA</div>
-  <div class="value" id="bank">Banka adı</div>
+<label>İşletme adı</label>
+<input id="business" placeholder="Güzel Kuyumculuk">
 
-  <div class="label">IBAN</div>
-  <div class="value iban" id="iban">IBAN bilgisi</div>
+<label>Hesap sahibi</label>
+<input id="owner" placeholder="Ahmet Şan">
 
-  <button onclick="copyInfo()">📋 Tüm Bilgileri Kopyala</button>
-  <p id="status" aria-live="polite"></p>
+<label>Banka adı</label>
+<input id="bank" placeholder="Banka adı">
+
+<label>IBAN</label>
+<input id="iban" placeholder="TR ile başlayan IBAN">
+
+<button onclick="createLink()">Bağlantıyı oluştur</button>
+<div id="result" hidden>
+<label>Hazır bağlantın</label>
+<input id="link" readonly>
+<button onclick="copyLink()">Bağlantıyı kopyala</button>
+<button onclick="openLink()">Sayfayı test et</button>
+</div>
+<p id="status" aria-live="polite"></p>
+</section>
+
+<section class="card">
+<h2>💳 IBAN Kartviziti</h2>
+<p class="muted">Ödeme bilgileri</p>
+<label>İŞLETME / HESAP SAHİBİ</label>
+<div class="value" id="showOwner">İşletme adı</div>
+<label>BANKA</label>
+<div class="value" id="showBank">Banka adı</div>
+<label>IBAN</label>
+<div class="value iban" id="showIban">IBAN bilgisi</div>
+<button onclick="copyInfo()">📋 Tüm Bilgileri Kopyala</button>
+<p id="copyStatus" class="muted" aria-live="polite"></p>
+</section>
+
 </main>
 <script>
 const p = new URLSearchParams(location.search);
-const owner = p.get("ad") || "İşletme adı";
-const bank = p.get("banka") || "Banka adı";
-const iban = p.get("iban") || "IBAN bilgisi";
+const business = p.get("isletme") || p.get("ad") || "";
+const owner = p.get("sahip") || "";
+const bank = p.get("banka") || "";
+const iban = p.get("iban") || "";
 
-document.getElementById("owner").textContent = owner;
-document.getElementById("bank").textContent = bank;
-document.getElementById("iban").textContent = iban;
+if (business || owner || bank || iban) {
+ document.getElementById("showOwner").textContent =
+ [business,owner].filter(Boolean).join(" — ") || "Belirtilmedi";
+ document.getElementById("showBank").textContent = bank || "Belirtilmedi";
+ document.getElementById("showIban").textContent = iban || "Belirtilmedi";
+ document.querySelectorAll("main > .card")[0].hidden = true;
+}
 
+function createLink(){
+ const b = document.getElementById("business").value.trim();
+ const o = document.getElementById("owner").value.trim();
+ const k = document.getElementById("bank").value.trim();
+ const i = document.getElementById("iban").value.trim().replace(/\s/g,"");
+ if(!b || !o || !k || !i){
+  document.getElementById("status").textContent = "Lütfen tüm alanları doldur.";
+  return;
+ }
+ const params = new URLSearchParams({isletme:b,sahip:o,banka:k,iban:i});
+ document.getElementById("link").value =
+ location.origin + location.pathname + "?" + params.toString();
+ document.getElementById("result").hidden = false;
+ document.getElementById("status").textContent = "Bağlantı hazır!";
+}
+async function copyLink(){
+ const input=document.getElementById("link");
+ try{
+  await navigator.clipboard.writeText(input.value);
+  document.getElementById("status").textContent="Bağlantı kopyalandı!";
+ }catch(e){
+  input.select();
+  document.execCommand("copy");
+  document.getElementById("status").textContent="Bağlantıyı kopyalamayı denedik; kopyalandığını kontrol et.";
+ }
+}
+function openLink(){location.href=document.getElementById("link").value}
 async function copyInfo(){
-  const text = `Hesap sahibi: ${owner}\nBanka: ${bank}\nIBAN: ${iban}`;
-  try{
-    await navigator.clipboard.writeText(text);
-    document.getElementById("status").textContent =
-      "✓ Bilgiler kopyalandı!";
-  }catch(e){
-    const t = document.createElement("textarea");
-    t.value = text;
-    document.body.appendChild(t);
-    t.select();
-    const ok = document.execCommand("copy");
-    t.remove();
-    document.getElementById("status").textContent =
-      ok ? "✓ Bilgiler kopyalandı!" :
-      "Kopyalanamadı; bilgileri elle seçebilirsin.";
-  }
+ const text="İşletme: "+(document.getElementById("showOwner").textContent)+
+ "\nBanka: "+document.getElementById("showBank").textContent+
+ "\nIBAN: "+document.getElementById("showIban").textContent;
+ try{
+  await navigator.clipboard.writeText(text);
+  document.getElementById("copyStatus").textContent="Bilgiler kopyalandı!";
+ }catch(e){
+  const t=document.createElement("textarea");t.value=text;
+  document.body.appendChild(t);t.select();
+  document.execCommand("copy");t.remove();
+  document.getElementById("copyStatus").textContent="Kopyalama denendi; sonucu kontrol et.";
+ }
 }
 </script>
 </body>
